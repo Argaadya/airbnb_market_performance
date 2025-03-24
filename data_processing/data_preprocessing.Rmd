@@ -1,0 +1,400 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-03-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE}
+library(dplyr)
+library(tidyr)
+library(RSQLite)
+
+options(scipen = 999)
+```
+
+
+# Listing
+
+```{r}
+df_listing <- read.csv("data/listings_sg.csv")
+
+glimpse(df_listing)
+```
+
+## Amenities
+
+```{r}
+df_amenities <- df_listing %>% 
+  select(listing_id = id, amenities) %>% 
+  separate_rows(amenities,
+                sep = '",'
+                ) %>% 
+  mutate(amenities = amenities %>% 
+           str_remove_all('"') %>% 
+           str_remove_all("\\[|\\]") %>% 
+           str_trim()
+         ) %>% 
+  filter(!amenities %in% c("", "N/A")) 
+
+df_amenities %>% 
+  count(amenities, sort =T)
+```
+
+## Host
+
+```{r}
+master_host <- df_listing %>% 
+  select(host_id,
+         host_name,
+         host_picture_url,
+         host_identity_verified,
+         host_is_superhost,
+         host_neighbourhood,
+         host_response_time,
+         host_response_rate,
+         host_since,
+         host_about,
+         host_url
+         ) %>% 
+  distinct() %>% 
+  mutate(host_response_rate = host_response_rate %>% 
+           str_remove_all("[%]") %>% 
+           as.numeric()
+         ) %>% 
+  mutate_at(vars(host_identity_verified, host_is_superhost),
+            function(x) case_when(x == "t" ~ T,
+                                  x == "f" ~ F
+                                  )
+            ) %>% 
+  mutate_if(is.character,
+            function(x) if_else(x %in% c("", "N/A"), NA, x)
+            )
+
+master_host %>% 
+  glimpse()
+```
+
+## Clean Listing
+
+```{r}
+df_clean_listing <- df_listing %>% 
+  transmute(id,
+             listing_url,
+            host_id,
+             name,
+             description,
+             neighborhood_overview,
+             picture_url,
+             neighbourhood = neighbourhood_cleansed,
+             latitude,
+             longitude,
+             property_type,
+             room_type,
+             accommodates,
+             bathrooms,
+             bathrooms_text,
+             bedrooms,
+             beds,
+             license,
+             instant_bookable,
+             review_scores_rating,
+             review_scores_accuracy,
+            review_scores_cleanliness,
+            review_scores_checkin,
+            review_scores_communication,
+            review_scores_location,
+            review_scores_value
+             ) %>% 
+  mutate_if(is.character,
+            function(x) if_else(x %in% c("", "N/A"), NA, x)
+            ) %>% 
+  mutate_at(vars(instant_bookable),
+            function(x) case_when(x == "t" ~ T,
+                                  x == "f" ~ F
+                                  )
+            )
+
+df_clean_listing
+```
+
+# Review
+
+```{r}
+df_review <- read.csv("data/reviews_sg.csv")
+
+glimpse(df_review)
+```
+
+## Master User
+
+```{r}
+master_user <- df_review %>% 
+  distinct(reviewer_id, reviewer_name)
+
+master_user
+```
+
+## Clean Review
+
+```{r}
+df_clean_review <- df_review %>% 
+  select(listing_id,
+         id,
+         reviewer_id,
+         comments
+         ) %>% 
+  mutate_if(is.character,
+            function(x) if_else(x %in% c("", "N/A", "n/a", "None"), NA, x)
+            ) %>% 
+  drop_na() 
+
+df_clean_review %>% 
+  write_csv("data/clean_review_sg.csv", na = "")
+```
+
+```{r}
+df_clean_review %>% 
+  filter(nchar(comments) == min(nchar(comments)))
+```
+
+
+# Calendar
+
+```{r}
+df_calendar <- read.csv("data/calendar_sg.csv")
+
+glimpse(df_calendar)
+```
+
+```{r}
+df_clean_calendar <- df_calendar %>% 
+  transmute(listing_id,
+            date_period = ymd(date),
+            available,
+            price = price %>% 
+              str_remove_all("[$,]") %>% 
+              as.numeric(),
+            
+            adjusted_price = adjusted_price %>% 
+              str_remove_all("[$,]") %>% 
+              as.numeric(),
+            
+            minimum_nights,
+            
+            maximum_nights
+            ) %>% 
+    mutate_at(vars(available),
+              function(x) case_when(x == "t" ~ T,
+                                    x == "f" ~ F
+                                    )
+              )
+```
+
+
+# Sqlite
+
+```{r}
+# Create a connection to a new SQLite file
+db_path <- "airbnb_sg.sqlite"
+conn <- dbConnect(SQLite(), db_path)
+
+# Check if the connection is successful
+dbListTables(conn)
+```
+
+## Master Host
+
+```{r}
+dbExecute(conn, "drop table amenities")
+```
+
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          host (host_id INTEGER PRIMARY KEY, 
+                        host_name TEXT, 
+                        host_picture_url TEXT, 
+                        host_identity_verified TEXT,
+                        host_is_superhost TEXT,
+                        host_neighbourhood TEXT,
+                        host_response_time TEXT,
+                        host_response_rate NUMERIC,
+                        host_since TEXT,
+                        host_about TEXT,
+                        host_url TEXT
+                      )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "host", master_host, append = TRUE, row.names = FALSE)
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM host")
+
+```
+
+```{r}
+dbListTables(conn)
+```
+
+
+## Amenities
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          amenities (listing_id INTEGER, 
+                      amenities TEXT
+                      )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "amenities", df_amenities, append = TRUE, row.names = FALSE)
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM amenities")
+
+```
+
+## User
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          user (user_id INTEGER PRIMARY KEY, 
+                name TEXT
+                )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "user", master_user %>% rename(user_id = reviewer_id, name = reviewer_name), 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM user")
+
+```
+
+## Calendar
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          listing_calendar (listing_id INTEGER, 
+                            date_period TEXT,
+                            available INTEGER,
+                            price NUMERIC,
+                            adjusted_price NUMERIC,
+                            minimum_nights INTEGER,
+                            maximum_nights INTEGER
+                            )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "listing_calendar", 
+             df_clean_calendar %>% mutate(date_period = as.character(date_period)), 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM listing_calendar")
+
+```
+
+## Listing
+
+```{r}
+dbExecute(conn, "DROP TABLE listing")
+```
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          listing (id INTEGER PRIMARY KEY, 
+                   listing_url TEXT,
+                   host_id INTEGER,
+                   name TEXT,
+                   description TEXT,
+                   neighborhood_overview TEXT,
+                   picture_url TEXT,
+                   neighbourhood TEXT,
+                   latitude NUMERIC,
+                   longitude NUMERIC,
+                   property_type TEXT,
+                   room_type TEXT,
+                   accommodates INTEGER,
+                   bathrooms NUMERIC,
+                   bathrooms_text TEXT,
+                   bedrooms INTEGER,
+                   beds INTEGER,
+                   license TEXT,
+                   instant_bookable INTEGER,
+                   review_scores_rating NUMERIC,
+                   review_scores_accuracy NUMERIC,
+                   review_scores_cleanliness NUMERIC,
+                   review_scores_checkin NUMERIC,
+                   review_scores_communication NUMERIC,
+                   review_scores_location NUMERIC,
+                   review_scores_value NUMERIC
+                    )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "listing", 
+             df_clean_listing, 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM listing") %>% 
+  glimpse()
+
+```
+
+
+## Review
+
+```{r}
+df_sentiment_review <- read.csv("data/clean_review_sg_with_sentiment.csv") %>% 
+  filter(sentiment != "") %>% 
+  left_join(df_review %>% 
+              select(id, date_review = date),
+            by = join_by(id)
+            )
+
+glimpse(df_sentiment_review)
+```
+
+
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          review (listing_id INTEGER,
+                  id INTEGER PRIMARY KEY,
+                  reviewer_id INTEGER,
+                  comments TEXT,
+                  sentiment TEXT,
+                  date_review TEXT
+                    )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "review", 
+             df_sentiment_review, 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM review")
+
+```
+
+
