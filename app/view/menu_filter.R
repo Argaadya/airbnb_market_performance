@@ -199,12 +199,90 @@ server <- function(id) {
       
       return(p_out)
     }
-    ), millis = 1000)
+    ), millis = 500)
+  
+  # Host Performance -----
+  host_perform <- debounce(
+    
+    reactive({
+      req(input$start_date)
+      
+      suppressWarnings({
+        start_date <- min(param_start_date(), param_end_date())
+        end_date <- max(param_start_date(), param_end_date())  
+      })
+      
+      p_out <- fetch_data$host_performance(start_date = start_date, 
+                                           end_date = end_date, 
+                                           neighbourhood = input$drop_neighbour, 
+                                           room = input$drop_property_type,
+                                           accom_num = input$accomm,
+                                           bed_num = input$beds,
+                                           bath_num = input$bathroom,
+                                           amenities_provided = input$picker_amenities,
+                                           is_superhost = coalesce(input$toggle_superhost, F),
+                                           is_instant = coalesce(input$toggle_instant, F))
+      
+      return(p_out)
+    }
+    ), millis = 500)
   
   
+  # Trend Performance -----
+  trend_perform <- debounce(
+    
+    reactive({
+      req(input$start_date)
+      
+      suppressWarnings({
+        start_date <- min(param_start_date(), param_end_date())
+        end_date <- max(param_start_date(), param_end_date())  
+      })
+      
+      p_out <- fetch_data$trend_performance(start_date = start_date, 
+                                           end_date = end_date, 
+                                           neighbourhood = input$drop_neighbour, 
+                                           room = input$drop_property_type,
+                                           accom_num = input$accomm,
+                                           bed_num = input$beds,
+                                           bath_num = input$bathroom,
+                                           amenities_provided = input$picker_amenities,
+                                           is_superhost = coalesce(input$toggle_superhost, F),
+                                           is_instant = coalesce(input$toggle_instant, F))
+      
+      return(p_out)
+    }
+    ), millis = 500)
   
   
-  return(list(listing_perform = listing_perform))
+  # Amenities Performance -----
+  amenities_perform <- debounce(
+    
+    reactive({
+      req(input$start_date)
+      
+      suppressWarnings({
+        start_date <- min(param_start_date(), param_end_date())
+        end_date <- max(param_start_date(), param_end_date())  
+      })
+      
+      p_out <- fetch_data$get_amenities(start_date = start_date, 
+                                        end_date = end_date, 
+                                        neighbourhood = input$drop_neighbour, 
+                                        room = input$drop_property_type,
+                                        accom_num = input$accomm,
+                                        bed_num = input$beds,
+                                        bath_num = input$bathroom,
+                                        amenities_provided = input$picker_amenities,
+                                        is_superhost = coalesce(input$toggle_superhost, F),
+                                        is_instant = coalesce(input$toggle_instant, F))
+      
+      return(p_out)
+    }
+    ), millis = 500)
+  
+  
+  return(list(listing_perform = listing_perform, host_perform = host_perform, trend_perform = trend_perform, amenities = amenities_perform))
 })
   
 }

@@ -4,7 +4,7 @@ box::use(
   reactable[reactableOutput, renderReactable, reactable, colDef, reactableTheme],
   utils[head],
   dplyr[coalesce, arrange, transmute],
-  waiter[Waiter, spin_3, useWaiter, waiter_show_on_load]
+  waiter[Waiter, spin_3, useWaiter]
 )
 
 
@@ -51,8 +51,6 @@ server <- function(id, shared_data) {
     ns <- session$ns
     
     w_1 <- Waiter$new(id = ns("listing_table"), html = spin_3(), color = "white")
-    
-    # waiter_show_on_load(html = spin_3(), color = "white")
     
     output$listing_table <- renderReactable({
       

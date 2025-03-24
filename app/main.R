@@ -1,7 +1,7 @@
 box::use(
   shiny[NS, div, tags, HTML, moduleServer, renderUI, reactive, debounce, reactiveValues],
   shiny.fluent[Stack, fluentPage],
-  waiter[useWaiter]
+  waiter[useWaiter, waiterPreloader, spin_3]
 )
 
 box::use(app/view/side_bar,
@@ -16,6 +16,7 @@ ui <- function(id) {
   fluentPage(
     
     useWaiter(),
+    waiterPreloader(html = spin_3() ),
       
     div(id = "container",
         
@@ -25,7 +26,7 @@ ui <- function(id) {
             tags$i(class = "fas fa-circle-left")
             ),
         
-        map$ui(ns("listing_map"))
+        map$ui(ns("map_listing"))
         )
     
   )
@@ -36,9 +37,9 @@ server <- function(id) {
   
   moduleServer(id, function(input, output, session) {
     
-    side_bar$server("side_bar")
+    selected_data <- side_bar$server("side_bar")
     
-    map$server("listing_map") 
+    map$server("map_listing", selected_data) 
     
   })
   

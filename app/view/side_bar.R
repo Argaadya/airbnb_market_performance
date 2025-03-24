@@ -32,7 +32,8 @@ ui <- function(id) {
         ),
       
       # Filter Menu -------
-      Stack(horizontal = T, tokens = list(childrenGap = 20),
+      Stack(horizontal = T, 
+            tokens = list(childrenGap = 20),
             DefaultButton.shinyInput(inputId = ns("date_button"), text = tags$span(HTML("<i class='fa fa-calendar-days'></i> Period ⌄"))),
             DefaultButton.shinyInput(inputId = ns("listing_button"), text = tags$span(HTML("<i class='fa fa-hotel'></i> Listing ⌄"))),
             DefaultButton.shinyInput(inputId = ns("amenities_button"), text = tags$span(HTML("<i class='fa fa-circle-plus'></i> Amenities ⌄")))
@@ -43,16 +44,16 @@ ui <- function(id) {
       # Main Content ----------
       
       Pivot(
-        PivotItem(headerText = "📊 Overview",
+        style = list(marginTop = 20), 
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>📊 Overview<p>")),
                   overview$ui(ns("overview"))
                   ),
-        PivotItem(headerText = "🏠 Listing",
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>🏠 Listing<p>")),
                   page_listing$ui(ns("page_listing"))
                   ),
-        PivotItem(headerText = "👨👩 Host",
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>👨👩 Host<p>")),
                   page_host$ui(ns("page_host"))
                   )
-        
       ),
       
       br(),
@@ -68,13 +69,12 @@ ui <- function(id) {
 server <- function(id) {
   
   moduleServer(id, function(input, output, session) {
-    
-  menu_filter$server("menu_filter")  
   
   selected_data <- menu_filter$server("menu_filter")
     
   page_listing$server("page_listing", selected_data)
   page_host$server("page_host", selected_data)
+  overview$server("overview", selected_data)
   
   # Trigger element visibility -----
   
@@ -90,6 +90,8 @@ server <- function(id) {
     session$sendCustomMessage("toggleAmenitiesBox", list())
   })
   
+  
+  return(selected_data)
   
   })
   
