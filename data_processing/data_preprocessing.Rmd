@@ -8,10 +8,14 @@ date: "2025-03-09"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Library
+
+The following library is used for processing the raw data acquired from [inside airbnb](https://insideairbnb.com/get-the-data)
 
 ```{r message=FALSE}
 library(dplyr)
 library(tidyr)
+library(stringr)
 library(RSQLite)
 
 options(scipen = 999)
@@ -20,13 +24,23 @@ options(scipen = 999)
 
 # Listing
 
+The listing data contains information regarding the listing or the property rented and its respective host. We will separate into several table:
+
+* listing
+* amenities
+* host
+
+## Read Data
+
 ```{r}
-df_listing <- read.csv("data/listings_sg.csv")
+df_listing <- read.csv("../data/listings_sg.csv")
 
 glimpse(df_listing)
 ```
 
 ## Amenities
+
+Here we will create a table to store amenities provided by each listing.
 
 ```{r}
 df_amenities <- df_listing %>% 
@@ -47,7 +61,9 @@ df_amenities %>%
 
 ## Host
 
-```{r}
+Here we will create a table to store information about the host.
+
+```{r warning=FALSE}
 master_host <- df_listing %>% 
   select(host_id,
          host_name,
@@ -80,6 +96,8 @@ master_host %>%
 ```
 
 ## Clean Listing
+
+Here we will create a listing table with selected columns. We will only store columns that will be relevant for the dashboard.
 
 ```{r}
 df_clean_listing <- df_listing %>% 
@@ -119,200 +137,30 @@ df_clean_listing <- df_listing %>%
                                   )
             )
 
-df_clean_listing
+df_clean_listing %>% 
+  glimpse()
 ```
 
-# Review
+## SQLite
 
-```{r}
-df_review <- read.csv("data/reviews_sg.csv")
+### Setup SQLite
 
-glimpse(df_review)
-```
+Here we will store the data into sqlite
 
-## Master User
-
-```{r}
-master_user <- df_review %>% 
-  distinct(reviewer_id, reviewer_name)
-
-master_user
-```
-
-## Clean Review
-
-```{r}
-df_clean_review <- df_review %>% 
-  select(listing_id,
-         id,
-         reviewer_id,
-         comments
-         ) %>% 
-  mutate_if(is.character,
-            function(x) if_else(x %in% c("", "N/A", "n/a", "None"), NA, x)
-            ) %>% 
-  drop_na() 
-
-df_clean_review %>% 
-  write_csv("data/clean_review_sg.csv", na = "")
-```
-
-```{r}
-df_clean_review %>% 
-  filter(nchar(comments) == min(nchar(comments)))
-```
-
-
-# Calendar
-
-```{r}
-df_calendar <- read.csv("data/calendar_sg.csv")
-
-glimpse(df_calendar)
-```
-
-```{r}
-df_clean_calendar <- df_calendar %>% 
-  transmute(listing_id,
-            date_period = ymd(date),
-            available,
-            price = price %>% 
-              str_remove_all("[$,]") %>% 
-              as.numeric(),
-            
-            adjusted_price = adjusted_price %>% 
-              str_remove_all("[$,]") %>% 
-              as.numeric(),
-            
-            minimum_nights,
-            
-            maximum_nights
-            ) %>% 
-    mutate_at(vars(available),
-              function(x) case_when(x == "t" ~ T,
-                                    x == "f" ~ F
-                                    )
-              )
-```
-
-
-# Sqlite
 
 ```{r}
 # Create a connection to a new SQLite file
-db_path <- "airbnb_sg.sqlite"
+db_path <- "../data/airbnb_sg.sqlite"
+
 conn <- dbConnect(SQLite(), db_path)
 
 # Check if the connection is successful
 dbListTables(conn)
 ```
 
-## Master Host
+### Clean Listing
 
-```{r}
-dbExecute(conn, "drop table amenities")
-```
-
-
-```{r}
-# Create a table
-dbExecute(conn, "CREATE TABLE 
-          host (host_id INTEGER PRIMARY KEY, 
-                        host_name TEXT, 
-                        host_picture_url TEXT, 
-                        host_identity_verified TEXT,
-                        host_is_superhost TEXT,
-                        host_neighbourhood TEXT,
-                        host_response_time TEXT,
-                        host_response_rate NUMERIC,
-                        host_since TEXT,
-                        host_about TEXT,
-                        host_url TEXT
-                      )"
-          )
-
-# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
-dbWriteTable(conn, "host", master_host, append = TRUE, row.names = FALSE)
-
-# Check if data was inserted
-dbGetQuery(conn, "SELECT * FROM host")
-
-```
-
-```{r}
-dbListTables(conn)
-```
-
-
-## Amenities
-
-```{r}
-# Create a table
-dbExecute(conn, "CREATE TABLE 
-          amenities (listing_id INTEGER, 
-                      amenities TEXT
-                      )"
-          )
-
-# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
-dbWriteTable(conn, "amenities", df_amenities, append = TRUE, row.names = FALSE)
-
-# Check if data was inserted
-dbGetQuery(conn, "SELECT * FROM amenities")
-
-```
-
-## User
-
-```{r}
-# Create a table
-dbExecute(conn, "CREATE TABLE 
-          user (user_id INTEGER PRIMARY KEY, 
-                name TEXT
-                )"
-          )
-
-# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
-dbWriteTable(conn, "user", master_user %>% rename(user_id = reviewer_id, name = reviewer_name), 
-             append = TRUE, row.names = FALSE
-             )
-
-# Check if data was inserted
-dbGetQuery(conn, "SELECT * FROM user")
-
-```
-
-## Calendar
-
-```{r}
-# Create a table
-dbExecute(conn, "CREATE TABLE 
-          listing_calendar (listing_id INTEGER, 
-                            date_period TEXT,
-                            available INTEGER,
-                            price NUMERIC,
-                            adjusted_price NUMERIC,
-                            minimum_nights INTEGER,
-                            maximum_nights INTEGER
-                            )"
-          )
-
-# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
-dbWriteTable(conn, "listing_calendar", 
-             df_clean_calendar %>% mutate(date_period = as.character(date_period)), 
-             append = TRUE, row.names = FALSE
-             )
-
-# Check if data was inserted
-dbGetQuery(conn, "SELECT * FROM listing_calendar")
-
-```
-
-## Listing
-
-```{r}
-dbExecute(conn, "DROP TABLE listing")
-```
+Store the clean listing table
 
 ```{r}
 # Create a table
@@ -358,11 +206,128 @@ dbGetQuery(conn, "SELECT * FROM listing") %>%
 
 ```
 
+### Host
 
-## Review
+Store the host table
 
 ```{r}
-df_sentiment_review <- read.csv("data/clean_review_sg_with_sentiment.csv") %>% 
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          host (host_id INTEGER PRIMARY KEY, 
+                        host_name TEXT, 
+                        host_picture_url TEXT, 
+                        host_identity_verified TEXT,
+                        host_is_superhost TEXT,
+                        host_neighbourhood TEXT,
+                        host_response_time TEXT,
+                        host_response_rate NUMERIC,
+                        host_since TEXT,
+                        host_about TEXT,
+                        host_url TEXT
+                      )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "host", master_host, append = TRUE, row.names = FALSE)
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM host")
+
+```
+
+## Amenities
+
+Store the amenities table
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          amenities (listing_id INTEGER, 
+                      amenities TEXT
+                      )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "amenities", df_amenities, append = TRUE, row.names = FALSE)
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM amenities")
+
+```
+
+# Review
+
+## Read Data
+
+Let's continue by reading the reviews data
+
+```{r}
+df_review <- read.csv("../data/reviews_sg.csv")
+
+glimpse(df_review)
+```
+
+## Master User
+
+Create a user table using the `reviewer_id` and `reviewer_name` from the review data
+
+```{r}
+master_user <- df_review %>% 
+  distinct(reviewer_id, reviewer_name)
+
+master_user
+```
+
+## Clean Review
+
+We will create a new column named sentiment, which is predicted using ROBERTA model from [Hugging Face](https://huggingface.co/cardiffnlp/twitter-roberta-base). Here, we clean up the review data by removing irrelevant comment and save it to another csv to be used for prediction with python and done in Google Colab.
+
+```{r}
+df_clean_review <- df_review %>% 
+  select(listing_id,
+         id,
+         reviewer_id,
+         comments
+         ) %>% 
+  mutate_if(is.character,
+            function(x) if_else(x %in% c("", "N/A", "n/a", "None"), NA, x)
+            ) %>% 
+  drop_na() 
+
+df_clean_review %>% 
+  write_csv("../data/clean_review_sg.csv", na = "")
+```
+
+## SQLite
+
+### Master user
+
+Create and insert user table
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          user (user_id INTEGER PRIMARY KEY, 
+                name TEXT
+                )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "user", master_user %>% rename(user_id = reviewer_id, name = reviewer_name), 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM user")
+
+```
+
+### Review
+
+The following is the processed data from Google Colab with a sentiment column
+
+```{r}
+df_sentiment_review <- read.csv("../data/clean_review_sg_with_sentiment.csv") %>% 
   filter(sentiment != "") %>% 
   left_join(df_review %>% 
               select(id, date_review = date),
@@ -372,7 +337,7 @@ df_sentiment_review <- read.csv("data/clean_review_sg_with_sentiment.csv") %>%
 glimpse(df_sentiment_review)
 ```
 
-
+Insert the data into review table
 
 ```{r}
 # Create a table
@@ -398,3 +363,73 @@ dbGetQuery(conn, "SELECT * FROM review")
 ```
 
 
+# Calendar
+
+## Read Data
+
+Calendar data refers to the availability and priec of each listing on particular date. This is by far the biggest data in this project with over 1 million rows.
+
+```{r}
+df_calendar <- read.csv("../data/calendar_sg.csv")
+
+glimpse(df_calendar)
+```
+
+Clean up and prepare the data
+
+```{r}
+df_clean_calendar <- df_calendar %>% 
+  transmute(listing_id,
+            date_period = date,
+            available,
+            price = price %>% 
+              str_remove_all("[$,]") %>% 
+              as.numeric(),
+            
+            adjusted_price = adjusted_price %>% 
+              str_remove_all("[$,]") %>% 
+              as.numeric(),
+            
+            minimum_nights,
+            
+            maximum_nights
+            ) %>% 
+    mutate_at(vars(available),
+              function(x) case_when(x == "t" ~ T,
+                                    x == "f" ~ F
+                                    )
+              )
+
+df_clean_calendar %>% 
+  glimpse()
+```
+
+## SQLite
+
+### Calendar
+
+Insert calendar into sqlite
+
+```{r}
+# Create a table
+dbExecute(conn, "CREATE TABLE 
+          listing_calendar (listing_id INTEGER, 
+                            date_period TEXT,
+                            available INTEGER,
+                            price NUMERIC,
+                            adjusted_price NUMERIC,
+                            minimum_nights INTEGER,
+                            maximum_nights INTEGER
+                            )"
+          )
+
+# Write the entire data.frame to SQLite (Creates table if it doesn't exist)
+dbWriteTable(conn, "listing_calendar", 
+             df_clean_calendar, 
+             append = TRUE, row.names = FALSE
+             )
+
+# Check if data was inserted
+dbGetQuery(conn, "SELECT * FROM listing_calendar")
+
+```
