@@ -33,7 +33,7 @@ The listing data contains information regarding the listing or the property rent
 ## Read Data
 
 ```{r}
-df_listing <- read.csv("../data/listings_sg.csv")
+df_listing <- read.csv("../data_raw/listings_sg.csv")
 
 glimpse(df_listing)
 ```
@@ -262,7 +262,7 @@ dbGetQuery(conn, "SELECT * FROM amenities")
 Let's continue by reading the reviews data
 
 ```{r}
-df_review <- read.csv("../data/reviews_sg.csv")
+df_review <- read.csv("../data_raw/reviews_sg.csv")
 
 glimpse(df_review)
 ```
@@ -295,7 +295,7 @@ df_clean_review <- df_review %>%
   drop_na() 
 
 df_clean_review %>% 
-  write_csv("../data/clean_review_sg.csv", na = "")
+  write_csv("../data_raw/clean_review_sg.csv", na = "")
 ```
 
 ## SQLite
@@ -327,7 +327,7 @@ dbGetQuery(conn, "SELECT * FROM user")
 The following is the processed data from Google Colab with a sentiment column
 
 ```{r}
-df_sentiment_review <- read.csv("../data/clean_review_sg_with_sentiment.csv") %>% 
+df_sentiment_review <- read.csv("../data_raw/clean_review_sg_with_sentiment.csv") %>% 
   filter(sentiment != "") %>% 
   left_join(df_review %>% 
               select(id, date_review = date),
@@ -370,7 +370,7 @@ dbGetQuery(conn, "SELECT * FROM review")
 Calendar data refers to the availability and priec of each listing on particular date. This is by far the biggest data in this project with over 1 million rows.
 
 ```{r}
-df_calendar <- read.csv("../data/calendar_sg.csv")
+df_calendar <- read.csv("../data_raw/calendar_sg.csv")
 
 glimpse(df_calendar)
 ```
