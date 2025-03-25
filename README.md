@@ -24,7 +24,7 @@ Side bar is where you can interact with the dashboard by click on one of the 3 b
 * Listing: filter out your listing by interacting with the available drop downs, toggles, and sliders
 * Amenities: filter out your listing by selecting only those that has specified amenities
 
-You can resize the side bar by dragging the arrow icon and the middle line. Under the button you will see 3 tab/menu with the following detail:
+To update or refresh the data, simply press the `Update Data` button on the top right of the side bar. You can resize the side bar by dragging the arrow icon and the middle line. Under the button you will see 3 tab/menu with the following detail:
 
 * Overview: general summary of the market performance, including:
   
