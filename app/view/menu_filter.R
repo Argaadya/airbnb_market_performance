@@ -1,5 +1,5 @@
 box::use(
-  shiny[div, NS, moduleServer, observeEvent, tags, HTML, reactive, debounce, req, observe],
+  shiny[div, NS, moduleServer, observeEvent, tags, HTML, reactive, debounce, req, observe, eventReactive],
   shiny.fluent[Stack, DatePicker.shinyInput, Toggle.shinyInput, Text, Dropdown.shinyInput],
   shinyWidgets[noUiSliderInput, pickerInput, pickerOptions, wNumbFormat],
   htmlwidgets[JS],
@@ -149,68 +149,77 @@ ui <- function(id) {
 
 
 #' @export
-server <- function(id) {
+server <- function(id, side_input) {
   
   moduleServer(id, function(input, output, session) {
+  ns <- session$ns
+
     
   # Reactive --------
   
-  # Fix Timezone issue
-  param_start_date <- reactive({
-    
-    input$start_date |>
-      as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
-      format(tz = Sys.timezone(), usetz = T) |>
-      strftime(format = "%Y-%m-%d")
-    
-  })
-  
-  param_end_date <- reactive({
-    
-    input$end_date  |>
-      as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
-      format(tz = Sys.timezone(), usetz = T) |>
-      strftime(format = "%Y-%m-%d")
-    
-  })
-  
   # Listing Performance -----
-  listing_perform <- debounce(
+  
+  listing_perform <- eventReactive(side_input$apply_button(), {
     
-    reactive({
-      req(input$start_date)
+    if (is.null(input$start_date)) {
+      start_date <- "2025-01-01"
+      end_date <- "2025-06-30"
+    } else {
       
-      suppressWarnings({
-        start_date <- min(param_start_date(), param_end_date())
-        end_date <- max(param_start_date(), param_end_date())  
-      })
+      start_input_date <- input$start_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
       
-      p_out <- fetch_data$listing_performance(start_date = start_date, 
-                                              end_date = end_date, 
-                                              neighbourhood = input$drop_neighbour, 
-                                              room = input$drop_property_type,
-                                              accom_num = input$accomm,
-                                              bed_num = input$beds,
-                                              bath_num = input$bathroom,
-                                              amenities_provided = input$picker_amenities,
-                                              is_superhost = coalesce(input$toggle_superhost, F),
-                                              is_instant = coalesce(input$toggle_instant, F))
+      end_input_date <- input$end_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      start_date <- min(start_input_date, end_input_date)
+      end_date <- max(start_input_date, end_input_date) 
+      
+    }
+    
+    p_out <- fetch_data$listing_performance(start_date = start_date, 
+                                            end_date = end_date, 
+                                            neighbourhood = input$drop_neighbour, 
+                                            room = input$drop_property_type,
+                                            accom_num = input$accomm,
+                                            bed_num = input$beds,
+                                            bath_num = input$bathroom,
+                                            amenities_provided = input$picker_amenities,
+                                            is_superhost = coalesce(input$toggle_superhost, F),
+                                            is_instant = coalesce(input$toggle_instant, F))
       
       
       return(p_out)
-    }
-    ), millis = 500)
+    },
+    ignoreNULL = F
+    )
   
   # Host Performance -----
-  host_perform <- debounce(
+  host_perform <- eventReactive(side_input$apply_button(), {
     
-    reactive({
-      req(input$start_date)
+    if (is.null(input$start_date)) {
+      start_date <- "2025-01-01"
+      end_date <- "2025-06-30"
+    } else {
       
-      suppressWarnings({
-        start_date <- min(param_start_date(), param_end_date())
-        end_date <- max(param_start_date(), param_end_date())  
-      })
+      start_input_date <- input$start_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      end_input_date <- input$end_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      start_date <- min(start_input_date, end_input_date)
+      end_date <- max(start_input_date, end_input_date) 
+      
+    }    
       
       p_out <- fetch_data$host_performance(start_date = start_date, 
                                            end_date = end_date, 
@@ -224,20 +233,31 @@ server <- function(id) {
                                            is_instant = coalesce(input$toggle_instant, F))
       
       return(p_out)
-    }
-    ), millis = 500)
+    }, ignoreNULL = F)
   
   
   # Trend Performance -----
-  trend_perform <- debounce(
+  trend_perform <- eventReactive(side_input$apply_button(), {
     
-    reactive({
-      req(input$start_date)
+    if (is.null(input$start_date)) {
+      start_date <- "2025-01-01"
+      end_date <- "2025-06-30"
+    } else {
       
-      suppressWarnings({
-        start_date <- min(param_start_date(), param_end_date())
-        end_date <- max(param_start_date(), param_end_date())  
-      })
+      start_input_date <- input$start_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      end_input_date <- input$end_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      start_date <- min(start_input_date, end_input_date)
+      end_date <- max(start_input_date, end_input_date) 
+      
+    }
       
       p_out <- fetch_data$trend_performance(start_date = start_date, 
                                            end_date = end_date, 
@@ -251,20 +271,31 @@ server <- function(id) {
                                            is_instant = coalesce(input$toggle_instant, F))
       
       return(p_out)
-    }
-    ), millis = 500)
+    }, ignoreNULL = F)
   
   
   # Amenities Performance -----
-  amenities_perform <- debounce(
+  amenities_perform <- eventReactive(side_input$apply_button(), {
     
-    reactive({
-      req(input$start_date)
+    if (is.null(input$start_date)) {
+      start_date <- "2025-01-01"
+      end_date <- "2025-06-30"
+    } else {
       
-      suppressWarnings({
-        start_date <- min(param_start_date(), param_end_date())
-        end_date <- max(param_start_date(), param_end_date())  
-      })
+      start_input_date <- input$start_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      end_input_date <- input$end_date |>
+        as.POSIXct(tz = "UTC", format = "%Y-%m-%dT%H:%M:%S") |>
+        format(tz = Sys.timezone(), usetz = T) |>
+        strftime(format = "%Y-%m-%d")
+      
+      start_date <- min(start_input_date, end_input_date)
+      end_date <- max(start_input_date, end_input_date) 
+      
+    }
       
       p_out <- fetch_data$get_amenities(start_date = start_date, 
                                         end_date = end_date, 
@@ -278,8 +309,7 @@ server <- function(id) {
                                         is_instant = coalesce(input$toggle_instant, F))
       
       return(p_out)
-    }
-    ), millis = 500)
+    }, ignoreNULL = F)
   
   
   return(list(listing_perform = listing_perform, host_perform = host_perform, trend_perform = trend_perform, amenities = amenities_perform))

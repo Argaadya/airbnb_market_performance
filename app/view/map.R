@@ -3,7 +3,8 @@ box::use(
   leaflet[leafletOutput, renderLeaflet, leaflet, markerClusterOptions, addTiles, addMarkers, addProviderTiles, icons],
   scales[percent, comma],
   dplyr[coalesce, case_when],
-  utils[str]
+  utils[str],
+  waiter[Waiter, spin_3, useWaiter]
 )
 
 
@@ -30,9 +31,14 @@ server <- function(id, shared_data){
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    w_map <- Waiter$new(id = "main", html = spin_3(), color = "transparent")
+    
     output$map_leaflet <- renderLeaflet({
       
+      
       req(shared_data$listing_perform())
+      
+      w_map$show()
       
       df_listing <- shared_data$listing_perform()
       
@@ -111,7 +117,7 @@ server <- function(id, shared_data){
                                              T ~ "static/hotel.png"),
                          iconWidth = 30, iconHeight = 30)
 
-      leaflet(data =  df_listing) |> 
+      p_map <- leaflet(data =  df_listing) |> 
         addTiles() |>
         addMarkers(lng = ~longitude,
                    lat = ~latitude,
@@ -120,6 +126,9 @@ server <- function(id, shared_data){
                    clusterOptions = markerClusterOptions()) |>
         addProviderTiles(provider = "CartoDB.Voyager")
       
+      w_map$hide()
+      
+      return(p_map)
       
     })
     

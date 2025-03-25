@@ -1,6 +1,7 @@
 box::use(
-  shiny[div, NS, tags, HTML, moduleServer, observeEvent, br],
+  shiny[div, NS, tags, HTML, moduleServer, observeEvent, br, reactive, observe],
   shiny.fluent[Stack, DefaultButton.shinyInput, Pivot, PivotItem],
+  dplyr[coalesce]
 )
 
 box::use(app/view/menu_filter,
@@ -36,7 +37,8 @@ ui <- function(id) {
             tokens = list(childrenGap = 20),
             DefaultButton.shinyInput(inputId = ns("date_button"), text = tags$span(HTML("<i class='fa fa-calendar-days'></i> Period ⌄"))),
             DefaultButton.shinyInput(inputId = ns("listing_button"), text = tags$span(HTML("<i class='fa fa-hotel'></i> Listing ⌄"))),
-            DefaultButton.shinyInput(inputId = ns("amenities_button"), text = tags$span(HTML("<i class='fa fa-circle-plus'></i> Amenities ⌄")))
+            DefaultButton.shinyInput(inputId = ns("amenities_button"), text = tags$span(HTML("<i class='fa fa-circle-plus'></i> Amenities ⌄"))),
+            DefaultButton.shinyInput(inputId = ns("apply_button"), text = "Update Data")
             ),
       
       menu_filter$ui(ns("menu_filter")),
@@ -70,7 +72,9 @@ server <- function(id) {
   
   moduleServer(id, function(input, output, session) {
   
-  selected_data <- menu_filter$server("menu_filter")
+  side_bar_input <- list(apply_button = reactive( {input$apply_button}))
+  
+  selected_data <- menu_filter$server("menu_filter", side_bar_input)
     
   page_listing$server("page_listing", selected_data)
   page_host$server("page_host", selected_data)
