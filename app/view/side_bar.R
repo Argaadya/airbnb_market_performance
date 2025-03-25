@@ -48,10 +48,10 @@ ui <- function(id) {
         PivotItem(headerText = tags$span(HTML("<p style='font-size:14px;'>📊 Overview<p>")),
                   overview$ui(ns("overview"))
                   ),
-        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>🏠 Listing<p>")),
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:14px;'>🏠 Listing<p>")),
                   page_listing$ui(ns("page_listing"))
                   ),
-        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>👨👩 Host<p>")),
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:14px;'>👨👩 Host<p>")),
                   page_host$ui(ns("page_host"))
                   )
       ),
