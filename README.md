@@ -6,7 +6,7 @@ This app is my first project on learning how to build a modularized web applicat
 
 ## Live Demo
 
-You can interact with the [Live Dashboard](https://argaadya.shinyapps.io/airbnb_market_performance/) that I have deployed.
+You can interact with the [Live Dashboard](https://argaadya.shinyapps.io/airbnb_market_performance/).
 
 ## Content of the App
 
