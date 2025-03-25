@@ -92,3 +92,12 @@ html, body {
 #listing_amenities.fade-in {
   opacity: 1;
 } 
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    width: 50%;
+    border: 1px solid transparent;
+}
