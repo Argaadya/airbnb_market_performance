@@ -45,7 +45,7 @@ ui <- function(id) {
       
       Pivot(
         style = list(marginTop = 20), 
-        PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>📊 Overview<p>")),
+        PivotItem(headerText = tags$span(HTML("<p style='font-size:14px;'>📊 Overview<p>")),
                   overview$ui(ns("overview"))
                   ),
         PivotItem(headerText = tags$span(HTML("<p style='font-size:18px;'>🏠 Listing<p>")),
