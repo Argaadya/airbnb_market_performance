@@ -129,7 +129,6 @@ server <- function(id, shared_data){
       w_map$hide()
       
       return(p_map)
-      
     })
     
     
