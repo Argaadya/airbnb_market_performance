@@ -52,15 +52,15 @@ Credits to [Inside Airbnb](https://insideairbnb.com/get-the-data/) for providing
 
 ### Data Preprocessing
 
-* Listing data are split into 3 separate data:
+* Listing data are split into 3 separate table:
 
   * host : all information regarding the host (some hosts can have multiple listings)
   * amenities: all amenities or service provided by the listing
   * listing: all information regarding the listed properties
 
-* Calendar data  are kept as a single data with some cleansing process, including converting the `price` into numeric and `availability` as logical
+* Calendar data  are kept as a single table with some cleansing process, including converting the `price` into numeric and `availability` as logical
 
-* Reviews data are split into 2 separate data:
+* Reviews data are split into 2 separate table:
 
   * user: information regarding the user  
   * review: Reviews data are further processed by adding sentiment flagging column to indicate if a review has a positive, negative, or neutral sentiment using [Twitter Roberta](https://huggingface.co/cardiffnlp/twitter-roberta-base) model.
